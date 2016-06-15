@@ -74,50 +74,17 @@ bool HelloWorld::init()
     return true;
 }
 
-
+namespace {
+    const char encryptkey[] = "encryptKey";
+}
+void Encrypt()
+{
+}
+void Decrypt()
+{
+}
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
-    unsigned char password[] = "PASSWORD";
-    std::string str = "暗号化復号化テスト\naaaaabbbbbbあああああああんんんんんんん";
-    
-    // std::stringをunsigned char*に変換
-    unsigned char* message = (unsigned char*)malloc(str.length() + 1);
-    message[str.length()] = '\0';
-    memcpy(message, str.c_str(), str.length());
-    
-    // 暗号化を行う
-    // encrypt内に暗号化したバイトデータが入る
-    int len = 0;
-    std::vector<unsigned char> encrypt(str.length() + EVP_MAX_BLOCK_LENGTH);
-    EVP_CIPHER_CTX context;
-    EVP_EncryptInit(&context, EVP_aes_128_ecb(), password, nullptr);
-    EVP_EncryptUpdate(&context, encrypt.data(), &len, message,
-                      static_cast<int>(str.length() + EVP_MAX_BLOCK_LENGTH));
-    EVP_EncryptFinal(&context, encrypt.data() + len, &len);
-    EVP_CIPHER_CTX_cleanup(&context);
-    
-    // 復号化を行う
-    // decrypt内に復号化した文字列が入る
-    int _length = 0;
-    std::vector<unsigned char> decrypt(encrypt.size() + EVP_MAX_BLOCK_LENGTH);
-    EVP_DecryptInit(&context, EVP_aes_128_ecb(), password, nullptr);
-    EVP_DecryptUpdate(&context, decrypt.data(), &_length, encrypt.data(),
-                      static_cast<int>(encrypt.size() + EVP_MAX_BLOCK_LENGTH));
-    EVP_DecryptFinal(&context, decrypt.data() + len, &len);
-    _length += len;
-    EVP_CIPHER_CTX_cleanup(&context);
-    
-    // 復号化したデータを文字列に変換
-    auto _str = __String::createWithData(decrypt.data(), _length);
-    CCLOG("%s", _str->getCString());
-    
-    // メモリ解放
-    free(message);
-    EVP_cleanup();
-    /*
-    Director::getInstance()->end();
-
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
-    exit(0);
-#endif*/
+    const unsigned char iv[] = "abcdefghijklmnop";
+    const char test[] = "暗号化復号化テスト\naaaaabbbbbbあああああああんんんんんんん";
 }
