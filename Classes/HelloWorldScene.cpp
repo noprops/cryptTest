@@ -4,6 +4,14 @@
 
 USING_NS_CC;
 
+namespace {
+    const unsigned char encryptkey[] = "encryptKey";
+    const unsigned char iv[] = "abcdefghijklmnop";
+    const char mojiretsu[] = "mojiretsu";
+    const char seisuu[] = "seisuu";
+    const char shousuu[] = "shousuu";
+}
+
 Scene* HelloWorld::createScene()
 {
     // 'scene' is an autorelease object
@@ -72,10 +80,10 @@ bool HelloWorld::init()
     return true;
 }
 
-namespace {
-    const char encryptkey[] = "encryptKey";
-}
-std::vector<unsigned char> Encrypt(const unsigned char *encryptMessage, int length, unsigned char *key, const unsigned char *iv)
+std::vector<unsigned char> Encrypt(const unsigned char *encryptMessage,
+                                   int length,
+                                   const unsigned char *key,
+                                   const unsigned char *iv)
 {
     // 暗号化を行う
     // encrypt内に暗号化したバイトデータが入る
@@ -106,7 +114,9 @@ std::vector<unsigned char> Encrypt(const unsigned char *encryptMessage, int leng
     
     return encrypt;
 }
-std::vector<unsigned char> Decrypt(std::vector<unsigned char> encrypt, unsigned char *key, const unsigned char *iv)
+std::vector<unsigned char> Decrypt(std::vector<unsigned char> encrypt,
+                                   const unsigned char *key,
+                                   const unsigned char *iv)
 {
     // 復号化を行う
     // decrypt内に復号化した文字列が入る
@@ -138,22 +148,54 @@ std::vector<unsigned char> Decrypt(std::vector<unsigned char> encrypt, unsigned 
 }
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
-    const unsigned char iv[] = "abcdefghijklmnop";
-    unsigned char key[] = "PASSWORD";
-    const unsigned char test[] = "暗号化復号化テスト\naaaaabbbbbbあああああああんんんんんんん";
+    ValueMap valueMap;
+    valueMap[mojiretsu] = "test文字列test文字列";
+    valueMap[seisuu] = 11111;
+    valueMap[shousuu] = 3.14f;
+    
+    printValueMap(valueMap);
     
     // 暗号化
     // 配列を渡す際は、データ長がリセットされる為、データ長は同時に渡す
-    std::vector<unsigned char> encrypt = Encrypt(test, sizeof(test), key, iv);
+    /*
+    std::vector<unsigned char> encrypt = Encrypt(test, sizeof(test), encryptkey, iv);
     
     // 確認出力
     auto _enstr = __String::createWithData(encrypt.data(), encrypt.size());
     CCLOG("%s", _enstr->getCString());
     
     // 復号化を行う
-    std::vector<unsigned char> decrypt = Decrypt(encrypt, key, iv);
+    std::vector<unsigned char> decrypt = Decrypt(encrypt, encryptkey, iv);
     
     // 確認出力
     auto _str = __String::createWithData(decrypt.data(), decrypt.size());
     CCLOG("%s", _str->getCString());
+     */
+}
+void HelloWorld::printValueMap(const cocos2d::ValueMap& valueMap)
+{
+    std::string str;
+    for (auto it = valueMap.begin();
+         it != valueMap.end();
+         it++)
+    {
+        str += it->first + " : ";
+        Value value = it->second;
+        switch (value.getType()) {
+            case cocos2d::Value::Type::STRING:
+                str += value.asString();
+                break;
+            case cocos2d::Value::Type::INTEGER:
+                str += std::to_string(value.asInt());
+                break;
+            case cocos2d::Value::Type::FLOAT:
+            case cocos2d::Value::Type::DOUBLE:
+                str += std::to_string(value.asFloat());
+                break;
+            default:
+                break;
+        }
+        str += "\n";
+    }
+    CCLOG("%s",str.c_str());
 }
