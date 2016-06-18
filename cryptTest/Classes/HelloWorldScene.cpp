@@ -99,8 +99,9 @@ std::vector<unsigned char> Encrypt(const unsigned char *encryptMessage, int leng
                       static_cast<int>(length + EVP_MAX_BLOCK_LENGTH));
     
     // ブロック長に満たないデータを不足分を補って暗号化
-    EVP_EncryptFinal(&context, encrypt.data() + len, &len);
-    
+    // 機能をオフにしていないとEVP_EncryptUpdateの段階でPaddingが実行済み
+    //EVP_EncryptFinal(&context, encrypt.data() + len, &len);
+
     // メモリ解放
     EVP_CIPHER_CTX_cleanup(&context);
     EVP_cleanup();
@@ -112,7 +113,6 @@ std::vector<unsigned char> Decrypt(std::vector<unsigned char> encrypt, unsigned 
     // 復号化を行う
     // decrypt内に復号化した文字列が入る
     EVP_CIPHER_CTX context;
-    int len = (int)encrypt.size();
     int _length = 0;
     std::vector<unsigned char> decrypt(encrypt.size() + EVP_MAX_BLOCK_LENGTH);
     
@@ -125,9 +125,12 @@ std::vector<unsigned char> Decrypt(std::vector<unsigned char> encrypt, unsigned 
     // encryptのデータを復号化しdecryptへ
     EVP_DecryptUpdate(&context, decrypt.data(), &_length, encrypt.data(),
                       static_cast<int>(encrypt.size() + EVP_MAX_BLOCK_LENGTH));
-    
+
     // ブロック長に満たなかったブロックを復号化し補ったデータを除去
+    int len = _length - (int)encrypt.size();
     EVP_DecryptFinal(&context, decrypt.data() + len, &len);
+    
+    
     
     // コンテキストの解放
     EVP_CIPHER_CTX_cleanup(&context);
@@ -140,7 +143,7 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     const unsigned char iv[] = "abcdefghijklmnop";
     unsigned char key[] = "PASSWORD";
     const unsigned char test[] = "暗号化復号化テスト\naaaaabbbbbbあああああああんんんんんんん";
-    
+
     // 暗号化
     // 配列を渡す際は、データ長がリセットされる為、データ長は同時に渡す
     std::vector<unsigned char> encrypt = Encrypt(test, sizeof(test), key, iv);
