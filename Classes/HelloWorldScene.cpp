@@ -1,7 +1,10 @@
 #include "HelloWorldScene.h"
 #include "SimpleAudioEngine.h"
+#include "tinyxml2/tinyxml2.h"
 #include <openssl/evp.h>
 
+using namespace std;
+using namespace tinyxml2;
 USING_NS_CC;
 
 namespace {
@@ -155,10 +158,13 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     
     printValueMap(valueMap);
     
+    char* str = createCharStringFromValueMap(valueMap);
+    
     // 暗号化
     // 配列を渡す際は、データ長がリセットされる為、データ長は同時に渡す
-    /*
-    std::vector<unsigned char> encrypt = Encrypt(test, sizeof(test), encryptkey, iv);
+    std::vector<unsigned char> encrypt = Encrypt((unsigned char*)str, sizeof(str), encryptkey, iv);
+    
+    free(str);
     
     // 確認出力
     auto _enstr = __String::createWithData(encrypt.data(), encrypt.size());
@@ -170,9 +176,8 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     // 確認出力
     auto _str = __String::createWithData(decrypt.data(), decrypt.size());
     CCLOG("%s", _str->getCString());
-     */
 }
-void HelloWorld::printValueMap(const cocos2d::ValueMap& valueMap)
+void printValueMap(const cocos2d::ValueMap& valueMap)
 {
     std::string str;
     for (auto it = valueMap.begin();
@@ -198,4 +203,137 @@ void HelloWorld::printValueMap(const cocos2d::ValueMap& valueMap)
         str += "\n";
     }
     CCLOG("%s",str.c_str());
+}
+
+static XMLElement* _generateElementForObject(const Value& value, XMLDocument *doc);
+static XMLElement* _generateElementForDict(const ValueMap& dict, XMLDocument *doc);
+static XMLElement* _generateElementForArray(const ValueVector& array, XMLDocument *pDoc);
+
+char* createCharStringFromValueMap(const ValueMap& valueMap)
+{
+    XMLDocument *doc = new (nothrow)XMLDocument();
+    if (nullptr == doc) {
+        return nullptr;
+    }
+    
+    XMLDeclaration *declaration = doc->NewDeclaration("xml version=\"1.0\" encoding=\"UTF-8\"");
+    if (nullptr == declaration)
+    {
+        delete doc;
+        return nullptr;
+    }
+    
+    doc->LinkEndChild(declaration);
+    XMLElement *docType = doc->NewElement("!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"");
+    doc->LinkEndChild(docType);
+    
+    XMLElement *rootEle = doc->NewElement("plist");
+    rootEle->SetAttribute("version", "1.0");
+    if (nullptr == rootEle)
+    {
+        delete doc;
+        return nullptr;
+    }
+    doc->LinkEndChild(rootEle);
+    
+    XMLElement *innerDict = _generateElementForDict(valueMap, doc);
+    if (nullptr == innerDict)
+    {
+        delete doc;
+        return nullptr;
+    }
+    rootEle->LinkEndChild(innerDict);
+    
+    XMLPrinter streamer;
+    doc->Print( &streamer );
+    
+    char* ret = (char*)malloc(streamer.CStrSize());
+    strcpy(ret, streamer.CStr());
+    return ret;
+}
+
+/*
+ * _generate XMLElement for Object through a XMLDocument
+ */
+static XMLElement* _generateElementForObject(const Value& value, XMLDocument *doc)
+{
+    // object is String
+    if (value.getType() == Value::Type::STRING)
+    {
+        XMLElement* node = doc->NewElement("string");
+        XMLText* content = doc->NewText(value.asString().c_str());
+        node->LinkEndChild(content);
+        return node;
+    }
+    
+    // object is integer
+    if (value.getType() == Value::Type::INTEGER)
+    {
+        XMLElement* node = doc->NewElement("integer");
+        XMLText* content = doc->NewText(value.asString().c_str());
+        node->LinkEndChild(content);
+        return node;
+    }
+    
+    // object is real
+    if (value.getType() == Value::Type::FLOAT || value.getType() == Value::Type::DOUBLE)
+    {
+        XMLElement* node = doc->NewElement("real");
+        XMLText* content = doc->NewText(value.asString().c_str());
+        node->LinkEndChild(content);
+        return node;
+    }
+    
+    //object is bool
+    if (value.getType() == Value::Type::BOOLEAN) {
+        XMLElement* node = doc->NewElement(value.asString().c_str());
+        return node;
+    }
+    
+    // object is Array
+    if (value.getType() == Value::Type::VECTOR)
+        return _generateElementForArray(value.asValueVector(), doc);
+    
+    // object is Dictionary
+    if (value.getType() == Value::Type::MAP)
+        return _generateElementForDict(value.asValueMap(), doc);
+    
+    CCLOG("This type cannot appear in property list");
+    return nullptr;
+}
+
+/*
+ * _generate XMLElement for Dictionary through a XMLDocument
+ */
+static XMLElement* _generateElementForDict(const ValueMap& dict, XMLDocument *doc)
+{
+    XMLElement* rootNode = doc->NewElement("dict");
+    
+    for (const auto &iter : dict)
+    {
+        XMLElement* tmpNode = doc->NewElement("key");
+        rootNode->LinkEndChild(tmpNode);
+        XMLText* content = doc->NewText(iter.first.c_str());
+        tmpNode->LinkEndChild(content);
+        
+        XMLElement *element = _generateElementForObject(iter.second, doc);
+        if (element)
+            rootNode->LinkEndChild(element);
+    }
+    return rootNode;
+}
+
+/*
+ * _generate XMLElement for Array through a XMLDocument
+ */
+static XMLElement* _generateElementForArray(const ValueVector& array, XMLDocument *pDoc)
+{
+    XMLElement* rootNode = pDoc->NewElement("array");
+    
+    for(const auto &value : array) {
+        XMLElement *element = _generateElementForObject(value, pDoc);
+        if (element)
+            rootNode->LinkEndChild(element);
+    }
+    return rootNode;
 }

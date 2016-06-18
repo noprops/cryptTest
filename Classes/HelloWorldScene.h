@@ -12,10 +12,12 @@ public:
     
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
-    void printValueMap(const cocos2d::ValueMap& valueMap);
     
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
 };
+
+void printValueMap(const cocos2d::ValueMap& valueMap);
+char* createCharStringFromValueMap(const cocos2d::ValueMap& valueMap);
 
 #endif // __HELLOWORLD_SCENE_H__
