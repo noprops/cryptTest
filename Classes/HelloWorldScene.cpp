@@ -424,10 +424,10 @@ static XMLElement* _generateElementForObject(const Value& value, XMLDocument *do
     }
     
     //object is bool
-    /*if (value.getType() == Value::Type::BOOLEAN) {
+    if (value.getType() == Value::Type::BOOLEAN) {
         XMLElement* node = doc->NewElement(value.asString().c_str());
         return node;
-    }*/
+    }
     
     // object is Array
     if (value.getType() == Value::Type::VECTOR)
