@@ -14,6 +14,9 @@ namespace {
     const char seisuu[] = "seisuu";
     const char shousuu[] = "shousuu";
 }
+//static XMLElement* _generateElementForObject(const Value& value, XMLDocument *doc);
+//static XMLElement* _generateElementForDict(const ValueMap& dict, XMLDocument *doc);
+//static XMLElement* _generateElementForArray(const ValueVector& array, XMLDocument *pDoc);
 
 // to_stringはAndroid未対応の為、コンパイルを通す為,定義
 namespace std {
@@ -150,13 +153,138 @@ std::vector<unsigned char> Decrypt(std::vector<unsigned char> encrypt,
     EVP_DecryptFinal(&context, decrypt.data() + len, &len);
     
     
-    
     // コンテキストの解放
     EVP_CIPHER_CTX_cleanup(&context);
     EVP_cleanup();
     
     return decrypt;
 }
+
+void parseArray(ValueVector &valueVector, tinyxml2::XMLElement* child);
+
+int checkSize(tinyxml2::XMLElement* child)
+{
+    child = child->FirstChildElement();
+    if (child==NULL) {
+        return 0;
+    }
+    int count = 0;
+    do {
+        count++;
+    } while((child = child->NextSiblingElement()));
+    return count;
+}
+
+// 辞書要素の取り込み
+void parseDictionary(ValueMap &valueMap, tinyxml2::XMLElement* child)
+{
+    child = child->FirstChildElement();
+    if (child==NULL) {
+        return;
+    }
+    do {
+        tinyxml2::XMLElement* key = child;
+        child = child->NextSiblingElement();
+        
+        // keyの対となるデータがなければbreak;
+        if (child == NULL) {
+            break;
+        }
+        
+        if (!strcmp(child->Name(),"dict")) {
+            ValueMap v;
+            parseDictionary(v, child);
+            valueMap[key->GetText()] = v;
+        }
+        else if (!strcmp(child->Name(), "array")) {
+            int size = checkSize(child);
+            ValueVector vec(size);
+            parseArray(vec, child);
+            valueMap[key->GetText()] = vec;
+        }
+        else if (!strcmp(child->Name(),"real")) {
+            double num = atof(child->GetText());
+            valueMap[key->GetText()] = num;
+        }
+        else if (!strcmp(child->Name(),"integer")) {
+            int num = atoi(child->GetText());
+            valueMap[key->GetText()] = num;
+        }
+        else if (!strcmp(child->Name(),"string")) {
+            valueMap[key->GetText()] = child->GetText();
+        }
+        else if (!strcmp(child->Name(), "true") || !strcmp(child->Name(), "false")) {
+            valueMap[key->GetText()] = child->Name();
+        }
+        
+        printValueMap(valueMap);
+        
+    } while((child = child->NextSiblingElement()));
+    
+}
+
+// 配列要素の取り込み
+void parseArray(ValueVector &valueVector, tinyxml2::XMLElement* child)
+{
+    child = child->FirstChildElement();
+    if (child==NULL) {
+        return;
+    }
+    int counter = 0;
+    do {
+        if(valueVector.size() <= counter) {
+            break;
+        }
+        
+        if (!strcmp(child->Name(),"dict")) {
+            ValueMap v;
+            parseDictionary(v, child);
+            valueVector[counter] = v;
+        }
+        else if (!strcmp(child->Name(), "array")) {
+            int size = checkSize(child);
+            ValueVector vec(size);
+            parseArray(vec, child);
+            valueVector[counter] = vec;
+        }
+        else if (!strcmp(child->Name(),"real")) {
+            double num = atof(child->GetText());
+            valueVector[counter] = num;
+        }
+        else if (!strcmp(child->Name(),"integer")) {
+            int num = atoi(child->GetText());
+            valueVector[counter] = num;
+        }
+        else if (!strcmp(child->Name(),"string")) {
+            valueVector[counter] = child->GetText();
+        }
+        else if (!strcmp(child->Name(), "true") || !strcmp(child->Name(), "false")) {
+            valueVector[counter] = child->Name();
+        }
+        
+        counter++;
+        
+        
+    } while((child = child->NextSiblingElement()));
+}
+
+void parseDocument(ValueMap &valueMap, const char* str, int length)
+{
+    //XMLを読み込んでパース
+    tinyxml2::XMLDocument *doc = new XMLDocument();
+    auto ret = doc->Parse((char*)str, length);
+    if (ret != tinyxml2::XML_NO_ERROR) {
+        return;
+    }
+    
+    // root取得
+    tinyxml2::XMLElement* childElement = doc->FirstChildElement();
+    do {
+        // 階層の要素取り込み
+        parseDictionary(valueMap, childElement);
+    } while((childElement = childElement->FirstChildElement()));
+}
+
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
     ValueMap valueMap;
@@ -167,7 +295,7 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     printValueMap(valueMap);
     
     char* str = createCharStringFromValueMap(valueMap);
-
+    
     // 暗号化
     // 配列を渡す際は、データ長がリセットされる為、データ長は同時に渡す
     std::vector<unsigned char> encrypt = Encrypt((unsigned char*)str, (int)strlen(str), encryptkey, iv);
@@ -183,7 +311,10 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     
     // 確認出力
     auto _str = __String::createWithData(decrypt.data(), decrypt.size());
-    CCLOG("%s", _str->getCString());
+    CCLOG("end:%s", _str->getCString());
+    
+    ValueMap value;
+    parseDocument(value, (const char*)_str->getCString(), _str->length());
 }
 void printValueMap(const cocos2d::ValueMap& valueMap)
 {
@@ -293,10 +424,10 @@ static XMLElement* _generateElementForObject(const Value& value, XMLDocument *do
     }
     
     //object is bool
-    if (value.getType() == Value::Type::BOOLEAN) {
+    /*if (value.getType() == Value::Type::BOOLEAN) {
         XMLElement* node = doc->NewElement(value.asString().c_str());
         return node;
-    }
+    }*/
     
     // object is Array
     if (value.getType() == Value::Type::VECTOR)
@@ -328,6 +459,7 @@ static XMLElement* _generateElementForDict(const ValueMap& dict, XMLDocument *do
         if (element)
             rootNode->LinkEndChild(element);
     }
+    
     return rootNode;
 }
 
