@@ -15,6 +15,15 @@ namespace {
     const char shousuu[] = "shousuu";
 }
 
+// to_stringはAndroid未対応の為、コンパイルを通す為,定義
+namespace std {
+    template< typename T > std::string to_string(T num) {
+        std::ostringstream stm;
+        stm << num;
+        return stm.str();
+    }
+}
+
 Scene* HelloWorld::createScene()
 {
     // 'scene' is an autorelease object
@@ -82,7 +91,6 @@ bool HelloWorld::init()
      */
     return true;
 }
-
 std::vector<unsigned char> Encrypt(const unsigned char *encryptMessage,
                                    int length,
                                    const unsigned char *key,
@@ -159,16 +167,16 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     printValueMap(valueMap);
     
     char* str = createCharStringFromValueMap(valueMap);
-    
+
     // 暗号化
     // 配列を渡す際は、データ長がリセットされる為、データ長は同時に渡す
-    std::vector<unsigned char> encrypt = Encrypt((unsigned char*)str, sizeof(str), encryptkey, iv);
+    std::vector<unsigned char> encrypt = Encrypt((unsigned char*)str, (int)strlen(str), encryptkey, iv);
     
     free(str);
     
     // 確認出力
     auto _enstr = __String::createWithData(encrypt.data(), encrypt.size());
-    CCLOG("%s", _enstr->getCString());
+    CCLOG("start:\n%s", _enstr->getCString());
     
     // 復号化を行う
     std::vector<unsigned char> decrypt = Decrypt(encrypt, encryptkey, iv);
