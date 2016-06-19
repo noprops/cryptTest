@@ -216,9 +216,6 @@ void parseDictionary(ValueMap &valueMap, tinyxml2::XMLElement* child)
         else if (!strcmp(child->Name(), "true") || !strcmp(child->Name(), "false")) {
             valueMap[key->GetText()] = child->Name();
         }
-        
-        printValueMap(valueMap);
-        
     } while((child = child->NextSiblingElement()));
     
 }
@@ -287,6 +284,8 @@ void parseDocument(ValueMap &valueMap, const char* str, int length)
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
+    CCLOG("%s", __PRETTY_FUNCTION__);
+    
     ValueMap valueMap;
     valueMap[mojiretsu] = "test文字列test文字列";
     valueMap[seisuu] = 11111;
@@ -315,6 +314,8 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
     
     ValueMap value;
     parseDocument(value, (const char*)_str->getCString(), _str->length());
+    CCLOG("復号後");
+    printValueMap(value);
 }
 void printValueMap(const cocos2d::ValueMap& valueMap)
 {
